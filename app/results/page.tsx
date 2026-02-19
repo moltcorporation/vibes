@@ -1,11 +1,15 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { VibeResults, ARCHETYPES } from '../utils/vibes';
+import html2canvas from 'html2canvas';
 
 export default function ResultsPage() {
+  const cardRef = useRef<HTMLDivElement>(null);
   const [vibes, setVibes] = useState<VibeResults | null>(null);
   const [loading, setLoading] = useState(true);
+  const [screenshotLoading, setScreenshotLoading] = useState(false);
+  const [shareSuccess, setShareSuccess] = useState<'idle' | 'screenshot' | 'twitter' | 'copy'>('idle');
 
   useEffect(() => {
     // Get vibe results from sessionStorage
@@ -15,6 +19,74 @@ export default function ResultsPage() {
     }
     setLoading(false);
   }, []);
+
+  const handleScreenshot = async () => {
+    if (!cardRef.current) return;
+    
+    setScreenshotLoading(true);
+    try {
+      const canvas = await html2canvas(cardRef.current, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        logging: false,
+      });
+      
+      // Download as PNG
+      const link = document.createElement('a');
+      link.href = canvas.toDataURL('image/png');
+      link.download = `my-vibe-${new Date().toISOString().split('T')[0]}.png`;
+      link.click();
+      
+      setShareSuccess('screenshot');
+      setTimeout(() => setShareSuccess('idle'), 2000);
+    } catch (error) {
+      console.error('Screenshot error:', error);
+      alert('Failed to create screenshot');
+    }
+    setScreenshotLoading(false);
+  };
+
+  const handleShareTwitter = () => {
+    if (!vibes) return;
+    
+    const archetype = vibes.vibeDistribution[0].label;
+    const text = `🌀 My vibe today: ${archetype} ${vibes.archetypeEmoji}\n\nMood: ${vibes.overallMood}/10 | Energy: ${vibes.overallEnergy}/10 | Day: ${vibes.overallDay}/10\n\nWhat's your vibe? Check out Vibes → `;
+    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}vibes.app`;
+    
+    window.open(twitterUrl, '_blank');
+    setShareSuccess('twitter');
+    setTimeout(() => setShareSuccess('idle'), 2000);
+  };
+
+  const handleCopyImage = async () => {
+    if (!cardRef.current) return;
+    
+    setScreenshotLoading(true);
+    try {
+      const canvas = await html2canvas(cardRef.current, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        logging: false,
+      });
+      
+      canvas.toBlob((blob) => {
+        if (blob) {
+          navigator.clipboard.write([
+            new ClipboardItem({ 'image/png': blob })
+          ]).then(() => {
+            setShareSuccess('copy');
+            setTimeout(() => setShareSuccess('idle'), 2000);
+          }).catch(() => {
+            alert('Failed to copy image');
+          });
+        }
+      });
+    } catch (error) {
+      console.error('Copy image error:', error);
+      alert('Failed to copy image');
+    }
+    setScreenshotLoading(false);
+  };
 
   if (loading) {
     return (
@@ -42,7 +114,7 @@ export default function ResultsPage() {
         </div>
 
         {/* Main Card */}
-        <div className="bg-white rounded-3xl shadow-2xl p-8 mb-8">
+        <div ref={cardRef} className="bg-white rounded-3xl shadow-2xl p-8 mb-8">
           {/* Primary Archetype */}
           <div className="text-center mb-12">
             <div className="text-8xl mb-4">{vibes.archetypeEmoji}</div>
@@ -104,12 +176,37 @@ export default function ResultsPage() {
 
           {/* Action Buttons */}
           <div className="flex flex-col gap-3 pt-4 border-t">
-            <button className="w-full py-3 px-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-semibold hover:shadow-lg transition">
-              📸 Screenshot My Vibe
+            <button
+              onClick={handleScreenshot}
+              disabled={screenshotLoading}
+              className={`w-full py-3 px-4 rounded-xl font-semibold transition ${
+                shareSuccess === 'screenshot'
+                  ? 'bg-green-600 text-white'
+                  : 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:shadow-lg'
+              } ${screenshotLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              {shareSuccess === 'screenshot' ? '✓ Screenshot Downloaded!' : '📸 Download Screenshot'}
             </button>
-            <button className="w-full py-3 px-4 bg-gray-100 text-gray-900 rounded-xl font-semibold hover:bg-gray-200 transition">
-              📝 Save to History
+            
+            <button
+              onClick={handleCopyImage}
+              disabled={screenshotLoading}
+              className="w-full py-3 px-4 bg-blue-100 text-blue-900 rounded-xl font-semibold hover:bg-blue-200 transition"
+            >
+              📋 Copy Image to Clipboard
             </button>
+            
+            <button
+              onClick={handleShareTwitter}
+              className={`w-full py-3 px-4 rounded-xl font-semibold transition ${
+                shareSuccess === 'twitter'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-sky-500 text-white hover:bg-sky-600'
+              }`}
+            >
+              {shareSuccess === 'twitter' ? '✓ Tweet Composed!' : '𝕏 Share to Twitter'}
+            </button>
+            
             <a href="/" className="w-full py-3 px-4 bg-gray-50 text-gray-900 rounded-xl font-semibold hover:bg-gray-100 transition text-center">
               ↺ Take Quiz Again
             </a>
