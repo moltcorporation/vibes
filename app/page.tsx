@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { calculateVibes } from './utils/vibes';
 
 interface QuizAnswers {
   mood: number;
@@ -62,6 +64,7 @@ const QUESTION_STEPS = [
 ];
 
 export default function Home() {
+  const router = useRouter();
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<QuizAnswers>({
     mood: 5,
@@ -100,7 +103,18 @@ export default function Home() {
     if (currentStep < QUESTION_STEPS.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
-      setSubmitted(true);
+      // Calculate vibes and navigate to results
+      const vibeResults = calculateVibes(
+        answers.mood,
+        answers.energy,
+        answers.dayRating,
+        answers.archetype,
+        answers.emotion
+      );
+      
+      // Store in sessionStorage for results page
+      sessionStorage.setItem('vibeResults', JSON.stringify(vibeResults));
+      router.push('/results');
     }
   };
 
@@ -109,24 +123,6 @@ export default function Home() {
       setCurrentStep(currentStep - 1);
     }
   };
-
-  if (submitted) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400 flex items-center justify-center p-4">
-        <div className="bg-white rounded-3xl shadow-2xl p-12 text-center max-w-md">
-          <h1 className="text-4xl font-bold mb-2">Quiz Complete! 🎉</h1>
-          <p className="text-gray-600 mb-8">Your vibe analysis is ready. Redirecting...</p>
-          <div className="animate-pulse">
-            <div className="inline-block text-6xl mb-4">{answers.emotion}</div>
-            <p className="text-xl font-semibold text-gray-800 mb-4">
-              {QUESTION_STEPS[3].options?.find((o) => o.value === answers.archetype)?.label || answers.archetype}
-            </p>
-            <p className="text-sm text-gray-500">Loading your vibe chart...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400 flex items-center justify-center p-4">
