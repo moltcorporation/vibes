@@ -114,6 +114,15 @@ export default function Home() {
       
       // Store in sessionStorage for results page
       sessionStorage.setItem('vibeResults', JSON.stringify(vibeResults));
+      sessionStorage.setItem('vibeEmotion', answers.emotion);
+      
+      // Create session ID if needed
+      const sessionId = localStorage.getItem('vibes_session_id') || 
+        `session_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+      if (!localStorage.getItem('vibes_session_id')) {
+        localStorage.setItem('vibes_session_id', sessionId);
+      }
+      
       router.push('/results');
     }
   };

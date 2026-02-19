@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { VibeResults, ARCHETYPES } from '../utils/vibes';
 import html2canvas from 'html2canvas';
 
@@ -15,7 +16,27 @@ export default function ResultsPage() {
     // Get vibe results from sessionStorage
     const stored = sessionStorage.getItem('vibeResults');
     if (stored) {
-      setVibes(JSON.parse(stored));
+      const parsed = JSON.parse(stored);
+      setVibes(parsed);
+      
+      // Save to database
+      const sessionId = localStorage.getItem('vibes_session_id') || 
+        `session_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+      
+      fetch('/api/vibes/history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          primaryArchetype: parsed.primaryArchetype,
+          archetypeEmoji: parsed.archetypeEmoji,
+          mood: parsed.overallMood,
+          energy: parsed.overallEnergy,
+          dayRating: parsed.overallDay,
+          emotion: sessionStorage.getItem('vibeEmotion') || '✨',
+          vibeDistribution: parsed.vibeDistribution,
+          sessionId,
+        }),
+      }).catch(err => console.error('Failed to save vibe:', err));
     }
     setLoading(false);
   }, []);
@@ -210,6 +231,10 @@ export default function ResultsPage() {
             <a href="/" className="w-full py-3 px-4 bg-gray-50 text-gray-900 rounded-xl font-semibold hover:bg-gray-100 transition text-center">
               ↺ Take Quiz Again
             </a>
+            
+            <Link href="/history" className="w-full py-3 px-4 bg-indigo-100 text-indigo-900 rounded-xl font-semibold hover:bg-indigo-200 transition text-center">
+              📊 View History
+            </Link>
           </div>
         </div>
 
